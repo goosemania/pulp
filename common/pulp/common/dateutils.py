@@ -10,6 +10,7 @@ import time
 from gettext import gettext as _
 
 import isodate
+import pytz
 from isodate.duration import fquotmod, max_days_in_month
 
 
@@ -407,3 +408,73 @@ def delta_from_key_value_pairs(key_value_pairs):
 
     delta = delta_class(**key_value_pairs)
     return delta
+
+# other date and time formats functions ----------------------------------------
+
+
+def unknown_format_to_datetime(datetime_str):
+    """
+    Attempts to parse various date-time strings including timezone abbreviation.
+
+    E.g. the following formats were found for `updated` field of the erratum:
+      - "2015-06-23 00:00:00"
+      - "2015-07-22 22:24:45 UTC"
+      - "Tue Apr  5 20:14:17 CEST 2016" # this one is taken from the example of erratum upload,
+        where the result of the date command is used to fill the `updated` field.
+        http://pulp-rpm.readthedocs.org/en/latest/user-guide/recipes.html#create-your-own-errata
+
+    :param datetime_str: string containing date and time in unknown format
+    :type  datetime_str: str
+
+    :return: parsed date and time
+    :rtype: datetime.datetime
+    """
+
+    # It is somewhat complex because Python's strptime() implementation does not parse timezone
+    # information in date-time strings (%Z) presumably due to poor timezones support in some
+    # OS'es. Therefore we'd need to process timezone references by hand.
+
+    strptime_patterns = ["%Y-%m-%d %H:%M:%S",
+                         "%a %b %d %H:%M:%S %Y"]
+
+    # Since strptime() can't ignore unwanted tokens, we are trying to get them
+    # out of the date-time string prior to passing it to strptime().
+    time_and_tz_regexp = re.compile('.*?([01][0-9]|2[0-3])(:[0-5][0-9]){2} (?P<tzname>[A-Za-z]+)')
+    abbreviated_tz_name = None
+    naive_datetime_str = datetime_str
+    m = time_and_tz_regexp.match(datetime_str)
+    if m:
+        abbreviated_tz_name = m.group('tzname')
+        naive_datetime_str = datetime_str.replace(abbreviated_tz_name, '').strip()
+        abbreviated_tz_name = abbreviated_tz_name.strip()
+
+    for strptime_pattern in strptime_patterns:
+        try:
+            naive_datetime = datetime.datetime.strptime(naive_datetime_str, strptime_pattern)
+        except ValueError:
+            continue
+        break
+    else:
+        raise ValueError(
+            'Unknown format: unable to convert %s to the datetime object' % naive_datetime_str)
+
+    if abbreviated_tz_name is None:
+        # no timezone passed, so we assume it is UTC
+        timezone_obj = pytz.timezone('UTC')
+        datetime_obj = timezone_obj.localize(naive_datetime)
+    else:
+        # This is:
+        # 1. Tricky because to proper match abbreviated timezone name
+        #    we first need to bring it into specific date to take DST into account.
+        # 2. Somewhat fragile as some of abbreviated timezone names are not unique (e.g. EST).
+        # 3. Inefficient due to many repetitive calls
+        for full_tz_name in pytz.all_timezones:
+            timezone_obj = pytz.timezone(full_tz_name)
+            localized_datetime_obj = timezone_obj.localize(naive_datetime)
+            if localized_datetime_obj.tzname() == abbreviated_tz_name:
+                datetime_obj = localized_datetime_obj
+                break
+        else:
+            raise ValueError('Unknown timezone abbreviation: "%s"' % abbreviated_tz_name)
+
+    return datetime_obj
