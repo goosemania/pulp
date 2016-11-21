@@ -12,10 +12,11 @@ import time
 from gettext import gettext as _
 
 from celery.signals import celeryd_after_setup
+from django.apps import apps
 from django.db.utils import IntegrityError
 
-from pulp.app.models.task import TaskLock, Worker
-from pulp.tasking import delete_worker, storage
+from pulp.app.apps import PulpAppConfig
+from pulp.tasking import base, storage
 from pulp.tasking.constants import TASKING_CONSTANTS
 
 # This import is here so that Celery will find our application instance
@@ -26,7 +27,7 @@ import pulp.tasking.registry  # noqa
 
 
 _logger = logging.getLogger(__name__)
-
+pulp_app_label = PulpAppConfig.label
 
 @celeryd_after_setup.connect
 def initialize_worker(sender, instance, **kwargs):
@@ -70,7 +71,7 @@ def initialize_worker(sender, instance, **kwargs):
     :type  kwargs:   dict
     """
     # Delete any potential old state
-    delete_worker(sender, normal_shutdown=True)
+    base.delete_worker(sender, normal_shutdown=True)
 
     storage.delete_worker_working_directory(sender)
     storage.create_worker_working_directory(sender)
@@ -92,6 +93,9 @@ def get_resource_manager_lock(name):
     :param name:   The hostname of the worker
     :type  name:   basestring
     """
+    TaskLock = apps.get_model(pulp_app_label, 'TaskLock')
+    Worker = apps.get_model(pulp_app_label, 'Worker')
+
     assert name.startswith(TASKING_CONSTANTS.RESOURCE_MANAGER_WORKER_NAME)
 
     lock = TaskLock(name=name, lock=TaskLock.RESOURCE_MANAGER)
@@ -135,7 +139,7 @@ def custom_sigterm_handler(name):
     def sigterm_handler(_signo, _stack_frame):
         msg = _("Worker '%s' shutdown" % name)
         _logger.info(msg)
-        delete_worker(name, normal_shutdown=True)
+        base.delete_worker(name, normal_shutdown=True)
         sys.exit(0)
 
     signal.signal(signal.SIGTERM, sigterm_handler)

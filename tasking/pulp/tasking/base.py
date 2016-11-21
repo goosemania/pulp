@@ -8,10 +8,11 @@ from gettext import gettext as _
 from celery import Task as CeleryTask, current_task, task
 from celery.app import control
 from celery.result import AsyncResult
+from django.apps import apps
 from django.db import transaction
 from django.db.models import Count
 
-from pulp.app.models import ReservedResource, Task as TaskStatus, TaskLock, Worker
+from pulp.app.apps import PulpAppConfig
 from pulp.common import TASK_FINAL_STATES, TASK_INCOMPLETE_STATES, TASK_STATES
 from pulp.exceptions import MissingResource, PulpException
 from pulp.tasking import storage
@@ -21,6 +22,7 @@ from pulp.tasking.constants import TASKING_CONSTANTS
 
 celery_controller = control.Control(app=celery)
 _logger = logging.getLogger(__name__)
+pulp_app_label = PulpAppConfig.label
 
 
 class PulpTask(CeleryTask):
@@ -65,6 +67,10 @@ def _queue_reserved_task(name, task_id, resource_id, inner_args, inner_kwargs):
 
     :return: None
     """
+    ReservedResource = apps.get_model(pulp_app_label, 'ReservedResource')
+    TaskStatus = apps.get_model(pulp_app_label, 'TaskStatus')
+    Worker = apps.get_model(pulp_app_label, 'Worker')
+
     while True:
         # Find a worker who already has this reservation, it is safe to send this work to them
         try:
@@ -114,6 +120,8 @@ def _get_unreserved_worker():
                        entries associated with it.
     :rtype:            pulp.app.model.Worker
     """
+    Worker = apps.get_model(pulp_app_label, 'Worker')
+
     free_workers_qs = Worker.objects.annotate(Count('reservations')).filter(reservations__count=0)
     if free_workers_qs.count() == 0:
         raise Worker.DoesNotExist()
@@ -137,6 +145,9 @@ def delete_worker(name, normal_shutdown=False):
                             False.
     :type normal_shutdown:  bool
     """
+    Worker = apps.get_model(pulp_app_label, 'Worker')
+    TaskLock = apps.get_model(pulp_app_label, 'TaskLock')
+
     if not normal_shutdown:
         msg = _('The worker named %(name)s is missing. Canceling the tasks in its queue.')
         msg = msg % {'name': name}
@@ -169,6 +180,9 @@ def _release_resource(task_id):
     :param task_id: The UUID of the task that requested the reservation
     :type  task_id: basestring
     """
+    TaskStatus = apps.get_model(pulp_app_label, 'TaskStatus')
+    ReservedResource = apps.get_model(pulp_app_label, 'ReservedResource')
+
     try:
         TaskStatus.objects.get(pk=task_id, state=TASK_STATES.RUNNING)
     except TaskStatus.DoesNotExist:
@@ -242,6 +256,8 @@ class UserFacingTask(PulpTask):
         :return:              An AsyncResult instance as returned by Celery's apply_async
         :rtype:               celery.result.AsyncResult
         """
+        TaskStatus = apps.get_model(pulp_app_label, 'TaskStatus')
+
         # Form a resource_id for reservation by combining given resource type and id. This way,
         # two different resources having the same id will not block each other.
         resource_id = ":".join((resource_type, resource_id))
@@ -286,6 +302,8 @@ class UserFacingTask(PulpTask):
         :return:            An AsyncResult instance as returned by Celery's apply_async
         :rtype:             celery.result.AsyncResult
         """
+        TaskStatus = apps.get_model(pulp_app_label, 'TaskStatus')
+
         tag_list = kwargs.pop('tags', [])
         group_id = kwargs.pop('group_id', None)
         async_result = super(UserFacingTask, self).apply_async(*args, **kwargs)
@@ -309,6 +327,8 @@ class UserFacingTask(PulpTask):
 
         Skip the status updating if the task is called synchronously.
         """
+        TaskStatus = apps.get_model(pulp_app_label, 'TaskStatus')
+
         if not self.request.called_directly:
             task_status = TaskStatus.objects.get(pk=self.request.id)
             task_status.set_running()
@@ -333,6 +353,8 @@ class UserFacingTask(PulpTask):
         :param kwargs:  Original keyword arguments for the executed task.
         :type kwargs:   dict
         """
+        TaskStatus = apps.get_model(pulp_app_label, 'TaskStatus')
+
         _logger.debug("Task successful : [%s]" % task_id)
         if not self.request.called_directly:
             task_status = TaskStatus.objects.get(pk=task_id)
@@ -361,6 +383,8 @@ class UserFacingTask(PulpTask):
         :param einfo:   celery's ExceptionInfo instance, containing serialized traceback.
         :type einfo:    ???
         """
+        TaskStatus = apps.get_model(pulp_app_label, 'TaskStatus')
+
         _logger.error(_('Task failed : [%s]') % task_id)
 
         if not self.request.called_directly:
@@ -371,6 +395,8 @@ class UserFacingTask(PulpTask):
 
     def _get_parent_arg(self):
         """Return a dictionary with the parent set if running inside of a Task"""
+        TaskStatus = apps.get_model(pulp_app_label, 'TaskStatus')
+
         parent_arg = {}
         current_task_id = get_current_task_id()
         if current_task_id is not None:
@@ -389,6 +415,8 @@ def cancel(task_id):
 
     :raises MissingResource: if a task with given task_id does not exist
     """
+    TaskStatus = apps.get_model(pulp_app_label, 'TaskStatus')
+
     try:
         task_status = TaskStatus.objects.get(pk=task_id)
     except TaskStatus.DoesNotExist:

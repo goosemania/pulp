@@ -18,7 +18,7 @@ from gettext import gettext as _
 import logging
 
 from pulp.app.models import Worker
-from pulp.tasking import delete_worker
+from pulp.tasking.base import delete_worker
 
 _logger = logging.getLogger(__name__)
 
