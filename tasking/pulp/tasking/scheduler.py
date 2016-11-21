@@ -11,9 +11,9 @@ from django.db import IntegrityError
 
 from pulp.app.models.task import TaskLock, Worker
 from pulp.tasking import worker_watcher
-from pulp.tasking.celery_instance import celery as app
+from pulp.standalone.celery_instance import celery as app
 from pulp.tasking.constants import TASKING_CONSTANTS as constants
-from pulp.tasking import delete_worker
+from pulp.tasking.base import delete_worker
 
 
 # The import below is not used in this module, but it needs to be kept here. This module is the

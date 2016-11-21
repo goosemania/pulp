@@ -33,7 +33,6 @@ MEDIA_ROOT = '/var/lib/pulp/content/'
 DEFAULT_FILE_STORAGE = 'pulp.app.models.storage.FileSystem'
 
 # Application definition
-
 INSTALLED_APPS = [
     # django stuff
     'django.contrib.admin',
