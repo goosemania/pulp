@@ -10,10 +10,9 @@ from django.utils import timezone
 from django.db import IntegrityError
 
 from pulp.app.models.task import TaskLock, Worker
-from pulp.tasking import worker_watcher
+from pulp.tasking.services import worker_watcher
 from pulp.tasking.celery_instance import celery as app
 from pulp.tasking.constants import TASKING_CONSTANTS as constants
-from pulp.tasking import delete_worker
 
 
 # The import below is not used in this module, but it needs to be kept here. This module is the
@@ -121,7 +120,7 @@ class CeleryProcessTimeoutMonitor(threading.Thread):
             if worker.name.startswith(constants.CELERYBEAT_WORKER_NAME):
                 worker.delete()
             else:
-                delete_worker(worker.name)
+                worker_watcher.delete_worker(worker.name)
 
         worker_count = Worker.objects.exclude(
             name__startswith=constants.RESOURCE_MANAGER_WORKER_NAME).exclude(
@@ -234,7 +233,6 @@ class Scheduler(beat.Scheduler):
         :return:    number of seconds before the next tick should run
         :rtype:     float
         """
-
         # this is not an event that gets sent anywhere. We process it
         # immediately.
         scheduler_event = {
@@ -283,5 +281,5 @@ class Scheduler(beat.Scheduler):
         raise NotImplementedError
 
     def close(self):
-        delete_worker(self.celerybeat_name, normal_shutdown=True)
+        worker_watcher.delete_worker(self.celerybeat_name, normal_shutdown=True)
         super(Scheduler, self).close()

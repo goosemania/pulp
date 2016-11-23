@@ -1,6 +1,5 @@
 import logging
 import time
-import traceback
 import uuid
 from contextlib import suppress
 from gettext import gettext as _
@@ -10,14 +9,12 @@ from celery.app import control
 from celery.result import AsyncResult
 from django.db import transaction
 from django.db.models import Count
-
-from pulp.app.models import ReservedResource, Task as TaskStatus, TaskLock, Worker
-from pulp.common import TASK_FINAL_STATES, TASK_INCOMPLETE_STATES, TASK_STATES
+from pulp.app.models import ReservedResource, Task as TaskStatus, Worker
+from pulp.common import TASK_FINAL_STATES, TASK_STATES
 from pulp.exceptions import MissingResource, PulpException
-from pulp.tasking import storage
-from pulp.tasking.celery_instance import celery
+from pulp.tasking.services import storage
 from pulp.tasking.celery_instance import DEDICATED_QUEUE_EXCHANGE, RESOURCE_MANAGER_QUEUE
-from pulp.tasking.constants import TASKING_CONSTANTS
+from pulp.tasking.celery_instance import celery
 
 celery_controller = control.Control(app=celery)
 _logger = logging.getLogger(__name__)
@@ -118,45 +115,6 @@ def _get_unreserved_worker():
     if free_workers_qs.count() == 0:
         raise Worker.DoesNotExist()
     return free_workers_qs.order_by('?').first()
-
-
-def delete_worker(name, normal_shutdown=False):
-    """
-    Delete the Worker with name from the database, cancel any associated tasks and reservations
-
-    If the worker shutdown normally, no message is logged, otherwise an error level message is
-    logged. Default is to assume the worker did not shut down normally.
-
-    Any resource reservations associated with this worker are cleaned up by this function.
-
-    Any tasks associated with this worker are explicitly canceled.
-
-    :param name:            The name of the worker you wish to delete.
-    :type  name:            basestring
-    :param normal_shutdown: True if the worker shutdown normally, False otherwise. Defaults to
-                            False.
-    :type normal_shutdown:  bool
-    """
-    if not normal_shutdown:
-        msg = _('The worker named %(name)s is missing. Canceling the tasks in its queue.')
-        msg = msg % {'name': name}
-        _logger.error(msg)
-
-    try:
-        worker = Worker.objects.get(name=name)
-    except Worker.DoesNotExist:
-        pass
-    else:
-        # Cancel all of the tasks that were assigned to this worker's queue
-        for task_status in worker.tasks.filter(state__in=TASK_INCOMPLETE_STATES):
-            cancel(task_status.pk)
-
-        worker.delete()
-
-    is_resource_manager = name.startswith(TASKING_CONSTANTS.RESOURCE_MANAGER_WORKER_NAME)
-    is_celerybeat = name.startswith(TASKING_CONSTANTS.CELERYBEAT_WORKER_NAME)
-    if is_celerybeat or is_resource_manager:
-        TaskLock.objects.filter(name=name).delete()
 
 
 @task(base=PulpTask)
