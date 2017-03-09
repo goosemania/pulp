@@ -53,6 +53,25 @@ def remap_fields_with_serializer(content_unit):
         content_unit[remapped_field] = content_unit.pop(original_field)
 
 
+def serialize_unit_with_serializer(content_unit):
+    """
+    Convert unit to its dictionary form using its serializer.
+
+    :param content_unit: Content unit to be converted
+    :type content_unit: dict
+    """
+    try:
+        content_type_id = content_unit['_content_type_id']
+    except KeyError:
+        # content unit didn't have a content type id, usually means we're testing...
+        _logger.debug('No _content_type_id found in content unit when remapping fields: '
+                      '{0!r}'.format(content_unit))
+    else:
+       serializer = units.get_model_serializer_for_type(content_type_id)
+       if serializer and content_type_id in ['rpm', 'srpm']:
+            serializer.serialize(content_unit)
+
+
 def content_unit_obj(content_unit):
     """
     Serialize a content unit.
