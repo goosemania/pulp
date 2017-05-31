@@ -8,7 +8,7 @@ from pulp.server.db.migrate.models import MigrationModule
 LAST_SYNC = 'last_sync'
 LAST_UPDATED = 'last_updated'
 LAST_OVERRIDE_CONFIG = 'last_override_config'
-MIGRATION = 'pulp.server.db.migrations.0027_importer_schema_change'
+MIGRATION = 'pulp.server.db.migrations.0302_upstream_0027_importer_schema_change'
 
 
 class TestMigration(TestCase):

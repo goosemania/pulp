@@ -6,7 +6,7 @@ from pulp.server.db.migrate.models import MigrationModule
 
 LAST_UPDATED = 'last_updated'
 LAST_OVERRIDE_CONFIG = 'last_override_config'
-MIGRATION = 'pulp.server.db.migrations.0026_revert_0025'
+MIGRATION = 'pulp.server.db.migrations.0301_upstream_0026_revert_0025'
 
 
 class TestMigration(TestCase):

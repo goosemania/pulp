@@ -6,7 +6,7 @@ from mock import Mock, patch
 from pulp.server.db.migrate.models import MigrationModule
 
 LAST_UPDATED = 'last_updated'
-MIGRATION = 'pulp.server.db.migrations.0028_distributor_last_updated_fix'
+MIGRATION = 'pulp.server.db.migrations.0303_upstream_0028_distributor_last_updated_fix'
 
 
 class TestMigration(TestCase):
