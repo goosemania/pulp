@@ -392,6 +392,11 @@ class Migration(object):
           1. Batch the migration.
           2. Delete empty directories created by the migration.
         """
+
+        # Re: bug:1381702
+        _log.info('Standard storage path migration skipped.')
+        return
+
         batch = Batch()
         for unit in chain(*self.plans):
             batch.add(unit)
