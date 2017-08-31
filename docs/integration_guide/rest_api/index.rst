@@ -11,3 +11,6 @@ The above command prompts the user to enter a new password for "admin" user.
     ``pulp-manager reset-admin-password --random``
 
 The above command generates a random password for "admin" user and prints it to the screen.
+
+
+.. swaggerv2doc:: http://127.0.0.1:8000/api/v3/rest_api/?format=openapi

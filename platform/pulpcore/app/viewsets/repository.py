@@ -14,8 +14,8 @@ from pulpcore.common import tags
 
 
 class RepositoryFilter(filterset.FilterSet):
-    name_in_list = CharInFilter(name='name', lookup_expr='in')
-    content_added_since = filters.Filter(name='last_content_added', lookup_expr='gt')
+    name_in_list = CharInFilter(name='name', lookup_expr='in', help_text='Filter desc1')
+    content_added_since = filters.Filter(name='last_content_added', lookup_expr='gt', help_text='Filter desc2')
 
     class Meta:
         model = Repository
@@ -23,6 +23,26 @@ class RepositoryFilter(filterset.FilterSet):
 
 
 class RepositoryViewSet(NamedModelViewSet):
+    """
+    API endpoint that allows repositories to be viewed or edited.
+
+    create:
+    Description of create for repository endpoint
+
+    content:
+    Description of content for repository endpoint
+
+    Additional info for content.
+
+    partial_update:
+    Description of partial_update for repository endpoint
+
+    retrieve:
+    Description of retrieve
+
+    list:
+    Description of list
+    """
     queryset = Repository.objects.all()
     serializer_class = RepositorySerializer
     endpoint_name = 'repositories'
@@ -114,6 +134,9 @@ class PublisherFilter(ContentAdaptorFilter):
 
 
 class ImporterViewSet(NamedModelViewSet):
+    """
+    retrieve: Description of retrieve.
+    """
     endpoint_name = 'importers'
     nest_prefix = 'repositories'
     lookup_field = 'name'

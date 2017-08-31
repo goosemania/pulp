@@ -25,7 +25,7 @@ class Repository(Model):
         notes (GenericKeyValueRelation): Arbitrary repository properties.
         content (models.ManyToManyField): Associated content.
     """
-    name = models.TextField(db_index=True, unique=True)
+    name = models.TextField(db_index=True, unique=True, help_text='The repository name')
     description = models.TextField(blank=True)
 
     last_content_added = models.DateTimeField(blank=True, null=True)
@@ -74,7 +74,7 @@ class ContentAdaptor(MasterModel):
 
         repository (models.ForeignKey): The associated repository.
     """
-    name = models.TextField(db_index=True)
+    name = models.TextField(db_index=True, help_text='The ContentAdaptor name')
     last_updated = models.DateTimeField(auto_now=True, blank=True, null=True)
 
     class Meta:

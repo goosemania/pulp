@@ -22,7 +22,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # See https://docs.djangoproject.com/en/1.9/howto/deployment/checklist/
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 # Silenced warnings
 # - fields.W342 is the warning for having "unique=True" on a ForeignKeyField, which is something
@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     # third-party
     'django_filters',
     'rest_framework',
+    'rest_framework_swagger',
     # pulp platform app
     'pulpcore.app',
 ]
@@ -114,9 +115,12 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
     'DEFAULT_PAGINATION_CLASS': 'pulpcore.app.pagination.UUIDPagination',
     'PAGE_SIZE': 100,
-    'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAuthenticated',)
+#    'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAuthenticated',)
 }
 
+SWAGGER_SETTINGS = {
+    'SUPPORTED_SUBMIT_METHODS': [],
+}
 
 AUTH_USER_MODEL = 'pulp_app.User'
 

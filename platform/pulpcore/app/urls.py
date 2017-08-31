@@ -5,6 +5,7 @@ import warnings
 from django.core.exceptions import AppRegistryNotReady
 from django.conf.urls import url, include
 from rest_framework_nested import routers
+from rest_framework_swagger.views import get_swagger_view
 
 from pulpcore.app.apps import pulp_plugin_configs
 from pulpcore.app.views.status import StatusView
@@ -61,6 +62,7 @@ except AppRegistryNotReady as ex:
     # import from succeeding, throw a warning explaining what's happening.
     warnings.warn("Unable to register plugin viewsets with API router, {}".format(ex.args[0]))
 
+schema_view = get_swagger_view(title='Pulp REST API')
 
 urlpatterns = [
     url(r'^api/v3/', include(root_router.urls)),
@@ -70,3 +72,5 @@ urlpatterns = [
 
 for nrouter in nested_routers:
     urlpatterns.append(url(r'^api/v3/', include(nrouter.urls)))
+
+urlpatterns.append(url(r'^api/v3/rest_api/', schema_view))

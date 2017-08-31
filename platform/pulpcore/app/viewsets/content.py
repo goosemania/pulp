@@ -75,6 +75,13 @@ class ContentViewSet(CreateDestroyReadNamedModelViewSet):
 
 
 class ArtifactViewSet(CreateDestroyReadNamedModelViewSet):
+    """
+    create:
+    Description of create.
+
+    sync:
+    Description of sync.
+    """
     endpoint_name = 'artifacts'
     queryset = Artifact.objects.all()
     serializer_class = ArtifactSerializer
