@@ -441,33 +441,19 @@ class RepoProfileApplicabilityManager(object):
         deleted, or as consumer profiles change. This method searches for RepoProfileApplicability
         objects that reference either repositories or profile hashes that no longer exist in Pulp.
         """
-        # Find all of the repo_ids that are referenced by RepoProfileApplicability objects
         rpa_collection = RepoProfileApplicability.get_collection()
-        rpa_repo_ids = rpa_collection.distinct('repo_id')
 
         # Find all of the repo_ids that exist in Pulp
         repo_ids = model.Repository.objects.distinct('repo_id')
 
-        # Find rpa_repo_ids that aren't part of repo_ids
-        missing_repo_ids = list(set(rpa_repo_ids) - set(repo_ids))
-
-        # Remove all RepoProfileApplicability objects that reference these repo_ids
-        if missing_repo_ids:
-            rpa_collection.remove({'repo_id': {'$in': missing_repo_ids}})
-
-        # Next, we need to find profile_hashes that don't exist in the UnitProfile collection
-        rpa_profile_hashes = rpa_collection.distinct('profile_hash')
+        # Remove all RepoProfileApplicability objects that DO NOT reference these repo_ids
+        rpa_collection.remove({'repo_id': {'$nin': repo_ids}})
 
         # Find the profile hashes that exist in current UnitProfiles
         profile_hashes = UnitProfile.get_collection().distinct('profile_hash')
 
-        # Find profile hashes that we have RepoProfileApplicability objects for, but no real
-        # UnitProfiles
-        missing_profile_hashes = list(set(rpa_profile_hashes) - set(profile_hashes))
-
-        # Remove all RepoProfileApplicability objects that reference these profile hashes
-        if missing_profile_hashes:
-            rpa_collection.remove({'profile_hash': {'$in': missing_profile_hashes}})
+        # Remove all RepoProfileApplicability objects that DO NOT reference these profile hashes
+        rpa_collection.remove({'profile_hash': {'$nin': profile_hashes}})
 
 
 # Instantiate one of the managers on the object it manages for convenience
